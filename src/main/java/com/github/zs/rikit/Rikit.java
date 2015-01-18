@@ -1,5 +1,5 @@
 package com.github.zs.rikit;
 
-public class Node {
+public class Rikit {
 
 }
