@@ -15,10 +15,13 @@ public class RikitInitializer extends ChannelInitializer<SocketChannel> {
 	
 	@Override
 	protected void initChannel(SocketChannel ch) throws Exception {
+		Rikit localInstance = RikitFactory.getLocalInstance();
+		RikitReceiver receiver = new RikitReceiver();
+		receiver.getHandlers().add(localInstance);
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));
-        pipeline.addLast(new RikitHandler());		
+        pipeline.addLast(receiver);		
 	}
 
 }

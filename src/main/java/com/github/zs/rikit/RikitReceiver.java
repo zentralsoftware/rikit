@@ -1,7 +1,6 @@
 package com.github.zs.rikit;
 
 import static io.netty.handler.codec.http.HttpHeaders.Names.CONTENT_TYPE;
-import static io.netty.handler.codec.http.HttpHeaders.Names.HOST;
 import static io.netty.handler.codec.http.HttpMethod.GET;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.FORBIDDEN;
@@ -27,30 +26,31 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class RikitHandler extends SimpleChannelInboundHandler<Object> {
+public class RikitReceiver extends SimpleChannelInboundHandler<Object> {
 
-	final static Logger logger = LoggerFactory.getLogger(RikitHandler.class);
+	final static Logger logger = LoggerFactory.getLogger(RikitReceiver.class);
 	
 	private WebSocketServerHandshaker handshaker;
-	private String hostname;
-	private int port;
 	private boolean useSSL;
 	private String path;
 	private String wsHostname;
 	private int wsPort;
+
+	private List<ReceiverHandler> handlers = new ArrayList<ReceiverHandler>();
 	
 	private Config config = ConfigFactory.load();
 	
-	public RikitHandler()
+	public RikitReceiver()
 	{
-		hostname = config.getString(Constants.CONFIG_HOSTNAME);
-		port = config.getInt(Constants.CONFIG_PORT);		
 		useSSL = config.getBoolean(Constants.CONFIG_USESSL);
 		path = config.getString(Constants.CONFIG_PATH);
 		wsHostname = config.getString(Constants.CONFIG_WSHOSTNAME);
@@ -87,12 +87,10 @@ public class RikitHandler extends SimpleChannelInboundHandler<Object> {
 
 		// Send the demo page and favicon.ico
 		if ("/".equals(req.getUri())) {
-			ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation(req));
+			ByteBuf content = WebSocketServerIndexPage.getContent(getWebSocketLocation());
 			FullHttpResponse res = new DefaultFullHttpResponse(HTTP_1_1, OK, content);
-
 			res.headers().set(CONTENT_TYPE, "text/html; charset=UTF-8");
 			HttpHeaders.setContentLength(res, content.readableBytes());
-
 			sendHttpResponse(ctx, req, res);
 			return;
 		}
@@ -104,13 +102,13 @@ public class RikitHandler extends SimpleChannelInboundHandler<Object> {
 
 		// Handshake
 		WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
-				getWebSocketLocation(req), null, true);
+				getWebSocketLocation(), null, true);
 		handshaker = wsFactory.newHandshaker(req);
 		if (handshaker == null) {
 			WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
 		} else {
 			handshaker.handshake(ctx.channel(), req).sync();
-			System.out.println("Server accept handshake");
+			logger.debug("Server accept handshake");
 		}
 	}
 	
@@ -139,7 +137,7 @@ public class RikitHandler extends SimpleChannelInboundHandler<Object> {
 			return;
 		}
 		if (frame instanceof PingWebSocketFrame) {
-			System.out.println("WebSocket Server received ping");
+			logger.debug("WebSocket Server received ping");
 			ctx.channel().write(new PongWebSocketFrame(frame.content().retain()));
 			return;
 		}
@@ -149,16 +147,24 @@ public class RikitHandler extends SimpleChannelInboundHandler<Object> {
 		}
 
 		String request = ((TextWebSocketFrame) frame).text();
-		System.err.printf("%s received %s%n", ctx.channel(), request);
-
+		logger.debug("%s received %s%n", ctx.channel(), request);
+		for (ReceiverHandler handler:handlers)
+		{
+			handler.onReceived(request);
+		}
 	}	
 	
-	private String getWebSocketLocation(FullHttpRequest req) {
+	private String getWebSocketLocation() {
 		String location =  wsHostname + ":" + wsPort + path;
 		if (useSSL) {
 			return "wss://" + location;
 		} else {
 			return "ws://" + location;
 		}
-	}	
+	}
+
+	public List<ReceiverHandler> getHandlers() {
+		return handlers;
+	}
+
 }
