@@ -26,35 +26,30 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 
-public class RikitReceiver extends SimpleChannelInboundHandler<Object> {
+public class RikitWebServiceHandler extends SimpleChannelInboundHandler<Object> {
 
-	final static Logger logger = LoggerFactory.getLogger(RikitReceiver.class);
+	final static Logger logger = LoggerFactory.getLogger(RikitWebServiceHandler.class);
 	
 	private WebSocketServerHandshaker handshaker;
 	private boolean useSSL;
 	private String path;
 	private String wsHostname;
 	private int wsPort;
-
-	private List<ReceiverHandler> handlers = new ArrayList<ReceiverHandler>();
 	
 	private Config config = ConfigFactory.load();
 	
-	public RikitReceiver()
+	public RikitWebServiceHandler()
 	{
-		useSSL = config.getBoolean(Constants.CONFIG_USESSL);
-		path = config.getString(Constants.CONFIG_PATH);
-		wsHostname = config.getString(Constants.CONFIG_WSHOSTNAME);
-		wsPort = config.getInt(Constants.CONFIG_WSPORT);			
+		useSSL = config.getBoolean(StringResource.CONFIG_USESSL);
+		path = config.getString(StringResource.CONFIG_PATH);
+		wsHostname = config.getString(StringResource.CONFIG_WSHOSTNAME);
+		wsPort = config.getInt(StringResource.CONFIG_WSPORT);			
 	}
 	
 	@Override
@@ -148,10 +143,7 @@ public class RikitReceiver extends SimpleChannelInboundHandler<Object> {
 
 		String request = ((TextWebSocketFrame) frame).text();
 		logger.debug("%s received %s%n", ctx.channel(), request);
-		for (ReceiverHandler handler:handlers)
-		{
-			handler.onReceived(request);
-		}
+
 	}	
 	
 	private String getWebSocketLocation() {
@@ -161,10 +153,6 @@ public class RikitReceiver extends SimpleChannelInboundHandler<Object> {
 		} else {
 			return "ws://" + location;
 		}
-	}
-
-	public List<ReceiverHandler> getHandlers() {
-		return handlers;
 	}
 
 }

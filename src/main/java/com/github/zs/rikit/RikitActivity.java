@@ -1,9 +1,10 @@
 package com.github.zs.rikit;
 
+
 public interface RikitActivity {
 
-	public void create();
-	public void join();
+	public void create() throws RikitException;
+	public void join() throws RikitException;
 	public void stabilize();
 	public void inform();
 	public void fixFingers();

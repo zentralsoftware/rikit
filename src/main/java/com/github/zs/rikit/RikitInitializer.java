@@ -15,9 +15,7 @@ public class RikitInitializer extends ChannelInitializer<SocketChannel> {
 	
 	@Override
 	protected void initChannel(SocketChannel ch) throws Exception {
-		Rikit localInstance = RikitFactory.getLocalInstance();
-		RikitReceiver receiver = new RikitReceiver();
-		receiver.getHandlers().add(localInstance);
+		RikitWebServiceHandler receiver = new RikitWebServiceHandler();
         ChannelPipeline pipeline = ch.pipeline();
         pipeline.addLast(new HttpServerCodec());
         pipeline.addLast(new HttpObjectAggregator(65536));

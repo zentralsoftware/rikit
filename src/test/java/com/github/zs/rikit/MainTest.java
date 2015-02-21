@@ -10,19 +10,16 @@ import io.netty.handler.logging.LoggingHandler;
 
 import java.net.InetAddress;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+
 public class MainTest {
 
     public static void main(String[] args) throws Exception {
     	
-    	 String ip = System.getenv("OPENSHIFT_INTERNAL_IP");
-         if(ip == null) {
-             ip = "localhost";
-         }
-         String ports = System.getenv("OPENSHIFT_INTERNAL_PORT");
-         if(ports == null) {
-             ports = "8080";
-         }    	
-    	
+        Config config = ConfigFactory.load();
+        String hostname = config.getString("rikit.hostname");
+        int port = config.getInt("rikit.port");
         EventLoopGroup bossGroup = new NioEventLoopGroup(1);
         EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
@@ -32,8 +29,7 @@ public class MainTest {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new RikitInitializer());
 
-            InetAddress inetAddress = InetAddress.getByName(ip);
-            int port = Integer.decode(ports);
+            InetAddress inetAddress = InetAddress.getByName(hostname);
             Channel ch = b.bind(inetAddress,port).sync().channel();
 
             System.out.println("started");
