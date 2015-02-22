@@ -9,7 +9,6 @@ import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 
 import java.net.InetAddress;
-import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 
 public class Rikit implements RikitActivity, ReceiverHandler {
 	
@@ -26,6 +24,15 @@ public class Rikit implements RikitActivity, ReceiverHandler {
 	private List<Rikit> predecessors = new ArrayList<Rikit>();	
 	private List<Rikit> successors = new ArrayList<Rikit>();
 	private Config config;
+    private EventLoopGroup bossGroup = new NioEventLoopGroup(1);
+    private EventLoopGroup workerGroup = new NioEventLoopGroup();
+	private Channel daemonChannel;
+	
+	public Rikit(Config config)
+	{
+		this.config = config;
+		init();
+	}
 	
 	public List<Rikit> getPredecessors() {
 		return predecessors;
@@ -63,6 +70,11 @@ public class Rikit implements RikitActivity, ReceiverHandler {
 	{
 		
 		startDaemon();
+	}
+	
+	private void doJoin()
+	{
+		
 	}
 
 	@Override
@@ -111,8 +123,6 @@ public class Rikit implements RikitActivity, ReceiverHandler {
 	{
         String hostname = config.getString(StringResource.CONFIG_HOSTNAME);
         int port = config.getInt(StringResource.CONFIG_PORT);
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup, workerGroup)
@@ -120,16 +130,34 @@ public class Rikit implements RikitActivity, ReceiverHandler {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new RikitInitializer());
             InetAddress inetAddress = InetAddress.getByName(hostname);
-            Channel ch = b.bind(inetAddress,port).sync().channel();
-            ch.closeFuture().sync();
+            daemonChannel = b.bind(inetAddress,port).sync().channel();
         } catch (UnknownHostException e) {
         	throw new RikitException(RikitErrorCode.NETWORK, e);
 		} catch (InterruptedException e) {
         	throw new RikitException(RikitErrorCode.INTERNAL, e);
-		}  finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
-        }				
+		} 				
 	}
 	
+	public void shutdown() throws RikitException
+	{
+		daemonChannel.close();
+		try {
+			daemonChannel.closeFuture().sync();
+		} catch (InterruptedException e) {
+			throw new RikitException(RikitErrorCode.INTERNAL, e);
+		}		
+	}
+	
+	private void init()
+	{
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			@Override
+			public void run()
+			{
+				logger.info("Shutdown daemon event loop");
+				bossGroup.shutdownGracefully();
+				workerGroup.shutdownGracefully();
+			}
+		});
+	}
 }
