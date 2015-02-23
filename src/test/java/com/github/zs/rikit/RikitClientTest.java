@@ -26,6 +26,29 @@ public class RikitClientTest {
 		client.bye();
 	}
 	
+	@Test
+	public void send() throws RikitException, URISyntaxException
+	{
+		URI destinationURI = new URI("ws://localhost:8080/rikit");
+		RikitClient client = new RikitClient(destinationURI);
+		client.send("test");
+		client.bye();
+	}	
+
+	@Test
+	public void multipleClientTest() throws RikitException, URISyntaxException
+	{
+		URI destinationURI = new URI("ws://localhost:8080/rikit");
+		RikitClient client1 = new RikitClient(destinationURI);
+		RikitClient client2 = new RikitClient(destinationURI);
+		client1.ping();
+		client1.send("test from client1");
+		client2.ping();
+		client2.send("test from client2");
+		client1.bye();
+		client2.bye();
+	}
+	
 	@AfterClass
 	public static void destroy() throws RikitException
 	{

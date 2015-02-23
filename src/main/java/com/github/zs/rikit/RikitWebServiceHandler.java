@@ -142,7 +142,7 @@ public class RikitWebServiceHandler extends SimpleChannelInboundHandler<Object> 
 		}
 
 		String request = ((TextWebSocketFrame) frame).text();
-		logger.debug("%s received %s%n", ctx.channel(), request);
+		logger.debug("{} received {}", ctx.channel(), request);
 
 	}	
 	

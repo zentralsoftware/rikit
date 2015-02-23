@@ -1,5 +1,8 @@
 package com.github.zs.rikit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -15,6 +18,7 @@ import io.netty.util.CharsetUtil;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
 
+	final static Logger logger = LoggerFactory.getLogger(WebSocketClientHandler.class);
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
 
@@ -38,7 +42,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) {
-        System.out.println("WebSocket Client disconnected!");
+        logger.debug("WebSocket Client disconnected!");
     }
 
     @Override
@@ -46,7 +50,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         Channel ch = ctx.channel();
         if (!handshaker.isHandshakeComplete()) {
             handshaker.finishHandshake(ch, (FullHttpResponse) msg);
-            System.out.println("WebSocket Client connected!");
+            logger.debug("WebSocket Client connected!");
             handshakeFuture.setSuccess();
             return;
         }
@@ -61,11 +65,11 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         WebSocketFrame frame = (WebSocketFrame) msg;
         if (frame instanceof TextWebSocketFrame) {
             TextWebSocketFrame textFrame = (TextWebSocketFrame) frame;
-            System.out.println("WebSocket Client received message: " + textFrame.text());
+            logger.debug("WebSocket Client received message: " + textFrame.text());
         } else if (frame instanceof PongWebSocketFrame) {
-            System.out.println("WebSocket Client received pong");
+        	logger.debug("WebSocket Client received pong");
         } else if (frame instanceof CloseWebSocketFrame) {
-            System.out.println("WebSocket Client received closing");
+        	logger.debug("WebSocket Client received closing");
             ch.close();
         }
     }
